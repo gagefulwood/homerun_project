@@ -9,14 +9,22 @@ class Device(models.Model):
     def __str__(self):
         return f"Device({self.id}): {self.name}"
 
+class ServerStatus(models.TextChoices):
+    STOPPED = 'stopped', "Stopped"
+    STARTING = 'starting', "Starting"
+    RUNNING = 'running', "Running"
+    ERROR =  'error', "Error"
+
+    @classmethod
+    def transitions(cls):
+        return {
+        cls.STOPPED: {cls.STARTING},
+        cls.STARTING: {cls.RUNNING, cls.ERROR},
+        cls.RUNNING: {cls.STOPPED},
+        cls.ERROR: {cls.STARTING},
+    }
 
 class Server(models.Model):
-    class ServerStatus(models.TextChoices):
-        STOPPED = 'stopped', "Stopped"
-        STARTING = 'starting', "Starting"
-        RUNNING = 'running', "Running"
-        ERROR =  'error', "Error"
-
     name = models.CharField(max_length=50)
     subdomain = models.CharField(max_length=50, unique=True)
     status = models.CharField(
@@ -42,18 +50,10 @@ class Server(models.Model):
         base = re.sub(r'[^a-zA-Z0-9]+', '-', self.name.lower()).strip('-')
         subdomain = base
         num = 1
-        while Server.objects.filter(subdomain__iexact=subdomain).exclude(pk=self.pk):
+        while Server.objects.filter(subdomain__iexact=subdomain).exclude(pk=self.pk).exists():
             subdomain = f"{subdomain}-{num}"
             num += 1
         return subdomain
 
-
     def __str__(self):
         return f"Server({self.id}): {self.name} [{self.status}]"
-    
-_ALLOWED = {
-    Server.ServerStatus.STOPPED: {Server.ServerStatus.STARTING},
-    Server.ServerStatus.STARTING: {Server.ServerStatus.RUNNING, Server.ServerStatus.ERROR},
-    Server.ServerStatus.RUNNING: {Server.ServerStatus.STOPPED},
-    Server.ServerStatus.ERROR: {Server.ServerStatus.STARTING},
-}

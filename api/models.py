@@ -1,4 +1,5 @@
 from django.db import models
+import re
 
 class Device(models.Model):
     name = models.CharField(max_length=255)
@@ -31,6 +32,21 @@ class Server(models.Model):
         related_name="servers",
     )
     created_at = models.DateTimeField(auto_now_add=True)
+
+    def save(self, *args, **kwargs):
+        if not self.pk or Server.objects.get(pk=self.pk).name != self.name:
+            self.subdomain = self._generate_subdomain()
+        super().save(*args, **kwargs)
+
+    def _generate_subdomain(self):
+        base = re.sub(r'[^a-zA-Z0-9]+', '-', self.name.lower()).strip('-')
+        subdomain = base
+        num = 1
+        while Server.objects.filter(subdomain__iexact=subdomain).exclude(pk=self.pk):
+            subdomain = f"{subdomain}-{num}"
+            num += 1
+        return subdomain
+
 
     def __str__(self):
         return f"Server({self.id}): {self.name} [{self.status}]"

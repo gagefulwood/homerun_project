@@ -1,5 +1,6 @@
 from rest_framework import viewsets
 from rest_framework.permissions import AllowAny
+from rest_framework import status as drf_status
 from api.serializers import DeviceSerializer, ServerSerializer
 from api.models import Device, Server
 
@@ -27,3 +28,4 @@ class ServerViewSet(viewsets.ModelViewSet):
     serializer_class = ServerSerializer
     permission_classes = [AllowAny]
     http_method_names = ['get', 'post', 'patch']
+                

@@ -11,7 +11,7 @@ class Device(models.Model):
 
 
 class Server(models.Model):
-    class StatusChoices(models.TextChoices):
+    class ServerStatus(models.TextChoices):
         STOPPED = 'stopped', "Stopped"
         STARTING = 'starting', "Starting"
         RUNNING = 'running', "Running"
@@ -21,8 +21,8 @@ class Server(models.Model):
     subdomain = models.CharField(max_length=50, unique=True)
     status = models.CharField(
         max_length=10,
-        choices=StatusChoices.choices,
-        default=StatusChoices.STOPPED,
+        choices=ServerStatus.choices,
+        default=ServerStatus.STOPPED,
     )
     device = models.ForeignKey(
         to=Device,
@@ -50,3 +50,10 @@ class Server(models.Model):
 
     def __str__(self):
         return f"Server({self.id}): {self.name} [{self.status}]"
+    
+_ALLOWED = {
+    Server.ServerStatus.STOPPED: {Server.ServerStatus.STARTING},
+    Server.ServerStatus.STARTING: {Server.ServerStatus.RUNNING, Server.ServerStatus.ERROR},
+    Server.ServerStatus.RUNNING: {Server.ServerStatus.STOPPED},
+    Server.ServerStatus.ERROR: {Server.ServerStatus.STARTING},
+}

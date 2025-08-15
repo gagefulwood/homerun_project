@@ -1,0 +1,7 @@
+asgiref==3.9.1
+Django==5.2.5
+django-extensions==4.1
+django-silk==5.4.1
+djangorestframework==3.16.1
+gprof2dot==2025.4.14
+sqlparse==0.5.3

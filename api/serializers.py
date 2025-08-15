@@ -1,6 +1,6 @@
 from django.db import transaction
 from rest_framework import serializers
-from .models import Device, Server, _ALLOWED
+from .models import Device, Server, ServerStatus
 
 
 class DeviceSerializer(serializers.ModelSerializer):
@@ -32,27 +32,19 @@ class ServerSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("Server name must be between 3 and 50 characters.")
         return name
     
-    def validate_status(self, value):
-        instance: Server
-        if instance and instance.status != value:
-            allowed = _ALLOWED[instance.status]
-            if value not in allowed:
-                raise serializers.ValidationError(
-                    f"Cannot transition from {instance.status} -> {value}."
-                )
-        return value
+    def validate_status(self, new_status):
+        instance: Server = self.instance
+        if not instance or new_status == instance.status:
+            return new_status
+        
+        # needs to add error catching for invalid transitions
     
     @transaction.atomic
-    def update(self, instance, validated):
-        new_status: str | None = validated.get("status")
-        if new_status == Server.ServerStatus.STARTING and instance.status != new_status:
-            device = (
-                Device.objects.filter(is_online=True, servers__isnull=True)
-                .order_by("last_seen")
-                .first()
-            )
-            if device:
-                validated["device"] = device
-            else:
-                validated["status"] = Server.ServerStatus.ERROR
-        return super().update(instance, validated)
+    def update(self, instance, validated_data):
+        new_status = validated_data.get("status")
+        if new_status == ServerStatus.STARTING and instance.status != new_status:
+            device = Device.objects.filter(is_online=True, servers__isnull=True).order_by("last_seen").first()
+            validated_data["device"] = device or instance.device
+            if not device:
+                validated_data["status"] = ServerStatus.ERROR
+        return super().update(instance, validated_data)

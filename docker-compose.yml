@@ -1,0 +1,43 @@
+# docker-compose.yml
+version: "3.9"
+
+services:
+  db:
+    image: postgres:16
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    environment:
+      POSTGRES_DB: server_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  web:
+    build: .
+    command: >
+      sh -c "python manage.py migrate &&
+             python manage.py collectstatic --noinput &&
+             gunicorn servermanager.wsgi:application --bind 0.0.0.0:8000"
+    volumes:
+      - .:/app
+      - static_files:/app/staticfiles
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DEBUG: "True"
+      DJANGO_SECRET_KEY: django-insecure-s81a8(8pnp!6gt6)t2rq8^1=dzwva#pb^s0ue^99w)b-do38i%
+      POSTGRES_DB: server_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_HOST: db
+
+volumes:
+  pgdata:
+  static_files:

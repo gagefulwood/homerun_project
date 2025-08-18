@@ -17,6 +17,10 @@ class ServerStatus(models.TextChoices):
 
     @classmethod
     def transitions(cls):
+        '''
+        Defines the valid state transitions for server status transitions.
+        Keys are the starting statuses, and the values are allowed transitions
+        '''
         return {
         cls.STOPPED: {cls.STARTING},
         cls.STARTING: {cls.RUNNING, cls.ERROR},
@@ -42,14 +46,23 @@ class Server(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     def save(self, *args, **kwargs):
+        # Automatically regenerates the subdomain when the name of the server is changed
         if not self.pk or Server.objects.get(pk=self.pk).name != self.name:
             self.subdomain = self._generate_subdomain()
         super().save(*args, **kwargs)
 
     def _generate_subdomain(self):
+        '''
+        Creates a unique, URL-friendly subdomain from the server name
+        1. Converts name to lowercase
+        2. Replaces spaces and special characters with hyphens
+        3. Appends a number if the subdomain generated already exists
+        '''
+        # Create the base subdomain from the name
         base = re.sub(r'[^a-zA-Z0-9]+', '-', self.name.lower()).strip('-')
         subdomain = base
         num = 1
+        # Checks for uniqueness and appends a number if a collision is found
         while Server.objects.filter(subdomain__iexact=subdomain).exclude(pk=self.pk).exists():
             subdomain = f"{subdomain}-{num}"
             num += 1

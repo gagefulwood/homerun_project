@@ -18,6 +18,7 @@ class DeviceSerializer(serializers.ModelSerializer):
             'id',
             'last_seen', # this status will be updated by the system automatically
         ) 
+    
 
 class ServerSerializer(serializers.ModelSerializer):
     detail_url = serializers.HyperlinkedIdentityField(view_name='server-detail')

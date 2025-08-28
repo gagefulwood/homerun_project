@@ -1,0 +1,59 @@
+### Create a device
+POST http://localhost:8000/api/devices/
+Content-Type: application/json
+
+{
+  "name": "Node A"
+}
+
+### List devices
+GET http://localhost:8000/api/devices/
+
+### Update device (set offline)
+PATCH http://localhost:8000/api/devices/1/
+Content-Type: application/json
+
+{
+  "is_online": false
+}
+
+### Get one device
+GET http://localhost:8000/api/devices/1/
+
+### Create a server (subdomain auto-generated)
+POST http://localhost:8000/api/servers/
+Content-Type: application/json
+
+{
+  "name": "Epic SMP Server"
+}
+
+### List servers
+GET http://localhost:8000/api/servers/
+
+### Get one server
+GET http://localhost:8000/api/servers/1/
+
+### Start a server (assign device, set running or error)
+PATCH http://localhost:8000/api/servers/1/
+Content-Type: application/json
+
+{
+  "status": "starting"
+}
+
+### Stop a running server (clears device)
+PATCH http://localhost:8000/api/servers/1/
+Content-Type: application/json
+
+{
+  "status": "stopped"
+}
+
+### Invalid transition (expect 400)
+PATCH http://localhost:8000/api/servers/1/
+Content-Type: application/json
+
+{
+  "status": "running"
+}

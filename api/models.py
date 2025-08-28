@@ -30,7 +30,7 @@ class ServerStatus(models.TextChoices):
 
 class Server(models.Model):
     name = models.CharField(max_length=50)
-    subdomain = models.CharField(max_length=50, unique=True)
+    subdomain = models.CharField(max_length=60, unique=True)
     status = models.CharField(
         max_length=10,
         choices=ServerStatus.choices,

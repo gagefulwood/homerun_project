@@ -1,5 +1,6 @@
 from django.db import transaction
 from rest_framework import serializers
+from rest_framework.exceptions import ValidationError
 from .models import Device, Server, ServerStatus
 
 
@@ -63,34 +64,38 @@ class ServerSerializer(serializers.ModelSerializer):
     
     @transaction.atomic
     def update(self, instance, validated_data):
-        # Handles the business logic for server status changes
+        # Device is read-only at API layer
+        validated_data.pop("device", None)
 
         requested = validated_data.get("status", instance.status)
-        # Handles the transition to 'starting' which triggers device assignment
-        if requested == ServerStatus.STARTING and instance.status != ServerStatus.STARTING:
-            # Finds the first available online device
+
+        # Check transitions centrally
+        allowed = ServerStatus.transitions().get(instance.status, set())
+        if requested not in allowed and requested != instance.status:
+            raise ValidationError(
+                f"Invalid transition {instance.status} -> {requested}"
+            )
+        # Special logic for “starting” (device assignment)
+        if requested == ServerStatus.STARTING:
             device = (
                 Device.objects
                 .filter(is_online=True)
+                .select_for_update(skip_locked=True)
                 .order_by("last_seen")
                 .first()
             )
             if device:
-                # If a device is found, assign it and set status to 'running' (last_seen is updated automatically by save method)
-                # attach device -> server goes RUNNING
-                device.save()
                 validated_data["device"] = device
                 validated_data["status"] = ServerStatus.RUNNING
             else:
-                # If no devices are online it sets the server status to 'error'
-                # no device -> immediate ERROR
                 validated_data["device"] = None
                 validated_data["status"] = ServerStatus.ERROR
-        # Handles th transition from 'running' to 'stopped'
-        elif requested == ServerStatus.STOPPED and instance.status == ServerStatus.RUNNING:
-            # When a running server is stopped, clear its device assignment
+
+        # running -> stopped -> clear device
+        elif requested == ServerStatus.STOPPED:
             validated_data["device"] = None
+            validated_data["status"] = ServerStatus.STOPPED
         else:
-            # for any other PATCH, keep the existing status if client omitted it
             validated_data.setdefault("status", instance.status)
+
         return super().update(instance, validated_data)
